@@ -29,10 +29,13 @@ def main():
     available_metrics = [col for col in df.columns if col not in ["League", "Minutes played", "Player", "Team"]]
     selected_metric = st.sidebar.selectbox("Select Performance Metric for Bar Graph", available_metrics)
 
+    # Calculate percentile rank for the selected metric based on the total dataset and convert to 100.0 scale
+    df["Percentile Rank"] = df[selected_metric].rank(pct=True) * 100.0
+
     # Subset the DataFrame based on the selected league, team, and minimal minutes
     filtered_df = df[(df["League"] == selected_league) & (df["Team"] == selected_team) & (df["Minutes played"] >= min_minutes_played)]
 
-    # Sort the DataFrame based on the selected metric in descending order
+    # Sort the filtered DataFrame based on the selected metric in descending order
     sorted_df = filtered_df.sort_values(by=selected_metric, ascending=False)
 
     # Display the top performers in a table and a bar graph side by side
@@ -48,7 +51,8 @@ def main():
         chart = alt.Chart(chart_data).mark_bar().encode(
             x=alt.X(selected_metric, title=selected_metric),
             y=alt.Y("Player", sort="-x", title="Player"),
-            tooltip=["Player", "Team", "Age", "Minutes played", selected_metric]
+            tooltip=["Player", "Team", "Age", "Minutes played", selected_metric, alt.Tooltip("Percentile Rank:Q", format=".1f")],
+            color=alt.Color("Percentile Rank:Q", title="Percentile Rank", scale=alt.Scale(scheme='viridis'))
         ).properties(width=500, height=400, title=f"Top 15 Performers in {selected_team} ({selected_league}) for {selected_metric}")
         st.altair_chart(chart)
 
