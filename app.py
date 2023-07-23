@@ -9,10 +9,10 @@ df = pd.read_excel(file_path)
 df = df.loc[:, ~df.columns.duplicated()]
 
 def main():
-    st.title("Top Performers App")
+    st.title("Women's football Bar graph app")
 
     # Create a sidebar column on the left for filters
-    st.sidebar.title("Filters")
+    st.sidebar.title("Choose filters")
 
     # Set the minimal minutes to 500 using the slider in the sidebar
     min_minutes_played = st.sidebar.slider("Minimum Minutes Played", min_value=0, max_value=2000, value=500, step=100)
@@ -23,41 +23,57 @@ def main():
 
     # Create a dropdown for the user to select a team within the selected league in the sidebar
     teams_in_selected_league = df[df["League"] == selected_league]["Team"].unique()
-    selected_team = st.sidebar.selectbox("Select Team", teams_in_selected_league)
+    selected_team = st.sidebar.selectbox("Select Team", teams_in_selected_league, key="team_filter")
 
-    # Create a dropdown for the user to select a metric for the bar graph in the sidebar
-    available_metrics = [col for col in df.columns if col not in ["League", "Minutes played", "Player", "Team"]]
-    selected_metric = st.sidebar.selectbox("Select Performance Metric for Bar Graph", available_metrics)
-
-    # Calculate percentile rank for the selected metric based on the total dataset and convert to 100.0 scale
-    df["Percentile Rank"] = df[selected_metric].rank(pct=True) * 100.0
+    # Calculate percentile ranks for all metrics based on the total dataset and convert to 100.0 scale
+    for col in df.columns[6:]:
+        df[f"{col} Percentile Rank"] = df[col].rank(pct=True) * 100.0
 
     # Subset the DataFrame based on the selected league, team, and minimal minutes
     filtered_df = df[(df["League"] == selected_league) & (df["Team"] == selected_team) & (df["Minutes played"] >= min_minutes_played)]
 
+    # Create a dropdown for the user to select a metric category in the sidebar
+    metric_category = st.sidebar.selectbox("Select Metric Category", ["Offensive", "Defensive", "Passing"])
+
+    # Determine the relevant metrics based on the selected category
+    if metric_category == "Offensive":
+        relevant_metrics = [
+            'Goals per 90', 'Non-penalty goals per 90', 'Shots per 90', 'xG per 90', 'Assists per 90', 'xA per 90',
+            'Crosses per 90', 'Dribbles per 90', 'Offensive duels per 90', 'Touches in box per 90',
+            'Progressive runs per 90'
+        ]
+    elif metric_category == "Defensive":
+        relevant_metrics = [
+            'Defensive duels per 90', 'Defensive duels won, %', 'Aerial duels per 90', 'Aerial duels won, %', 
+            'Shots blocked per 90', 'PAdj Sliding tackles', 'PAdj Interceptions', 'Fouls per 90'
+        ]
+    else:
+        relevant_metrics = [
+            'Passes per 90', 'Accurate passes, %', 'Assists per 90', 'xA per 90', 'Second assists per 90',
+            'Third assists per 90', 'Key passes per 90', 'Passes to final third per 90', 'Passes to penalty area per 90',
+            'Through passes per 90', 'Deep completions per 90', 'Progressive passes per 90'
+        ]
+
     # Sort the filtered DataFrame based on the selected metric in descending order
+    selected_metric = st.sidebar.selectbox(f"Select {metric_category} Metric", relevant_metrics)
+
     sorted_df = filtered_df.sort_values(by=selected_metric, ascending=False)
 
-    # Display the top performers in a table and a bar graph side by side
-    col1, col2 = st.columns(2)
+    # Display the team filter on the left column
+    st.sidebar.write(f"Selected Team: {selected_team}")
 
-    with col1:
-        st.write(f"Top Performers in {selected_team} ({selected_league}) with at least {min_minutes_played} Minutes Played:")
-        table_columns = ["Player", "Team", "Age", "Minutes played", selected_metric]
-        st.dataframe(sorted_df[table_columns].head(15), height=400)
-
-    with col2:
-        chart_data = sorted_df.head(15)
-        chart = alt.Chart(chart_data).mark_bar().encode(
-            x=alt.X(selected_metric, title=selected_metric),
-            y=alt.Y("Player", sort="-x", title="Player"),
-            tooltip=["Player", "Team", "Age", "Minutes played", selected_metric, alt.Tooltip("Percentile Rank:Q", format=".1f")],
-            color=alt.Color("Percentile Rank:Q", title="Percentile Rank", scale=alt.Scale(scheme='viridis'))
-        ).properties(width=500, height=400, title=f"Top 15 Performers in {selected_team} ({selected_league}) for {selected_metric}")
-        st.altair_chart(chart)
+    # Display the graph for selected metric category in the main column
+    chart_data = sorted_df.head(15)
+    chart = alt.Chart(chart_data).mark_bar().encode(
+        x=alt.X(selected_metric, title=selected_metric),
+        y=alt.Y("Player", sort="-x", title="Player"),
+        tooltip=["Player", "Team", "Age", "Minutes played", selected_metric, alt.Tooltip(f"{selected_metric} Percentile Rank:Q", format=".1f")],
+        color=alt.Color(f"{selected_metric} Percentile Rank:Q", title=f"{selected_metric} Percentile Rank", scale=alt.Scale(scheme='viridis'))
+    ).properties(width=1000, height=600, title=f"Top 15 {metric_category} Performers in {selected_team} ({selected_league}) for {selected_metric} |@ShePlotsFC")
+    st.altair_chart(chart)
 
     # Add the text at the bottom of the app
-    st.markdown("@lambertsmarc | collected at 22-07-2023 | Wyscout")
+    st.markdown("Marc Lamberts @lambertsmarc @ShePlotsFC | Collected at 22-07-2023 | Wyscout")
 
 if __name__ == "__main__":
     main()
