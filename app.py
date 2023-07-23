@@ -2,28 +2,12 @@ import streamlit as st
 import pandas as pd
 import altair as alt
 
-file_path = "Database Women.xlsx"
-df = pd.read_excel(file_path)
-
-# Drop duplicate columns from the DataFrame
-df = df.loc[:, ~df.columns.duplicated()]
-
-def main(df):
-    st.title("Women's football Bar graph app")
-
-    # Create a sidebar column on the left for filters
-    st.sidebar.title("Choose filters")
-
-    # Set the minimal minutes to 500 using the slider in the sidebar
-    min_minutes_played = st.sidebar.slider("Minimum Minutes Played", min_value=0, max_value=2000, value=500, step=100)
-
-    # Create a dropdown for the user to select a league in the sidebar
-    leagues = df["League"].unique()
-    selected_league = st.sidebar.selectbox("Select League", leagues)
-
-    # Create a dropdown for the user to select a team within the selected league in the sidebar
-    teams_in_selected_league = df[df["League"] == selected_league]["Team"].unique()
-    selected_team = st.sidebar.selectbox("Select Team", teams_in_selected_league, key="team_filter")
+# Function to read and preprocess the data
+@st.cache(allow_output_mutation=True)
+def load_and_process_data(file_path):
+    df = pd.read_excel(file_path)
+    # Drop duplicate columns from the DataFrame
+    df = df.loc[:, ~df.columns.duplicated()]
 
     # Calculate percentile ranks for all metrics based on the total dataset and convert to 100.0 scale
     percentile_ranks = pd.DataFrame()
@@ -33,7 +17,30 @@ def main(df):
     # Concatenate the percentile ranks DataFrame with the original DataFrame
     df = pd.concat([df, percentile_ranks], axis=1)
 
-    # Subset the DataFrame based on the selected league, team, and minimal minutes
+    return df
+
+def main():
+    st.title("Women's football Bar graph app")
+
+    # Create a sidebar column on the left for filters
+    st.sidebar.title("Choose filters")
+
+    # Set the minimal minutes to 500 using the slider in the sidebar
+    min_minutes_played = st.sidebar.slider("Minimum Minutes Played", min_value=0, max_value=2000, value=500, step=100)
+
+    # Load data using the caching function
+    file_path = "Database Women.xlsx"
+    df = load_and_process_data(file_path)
+
+    # Create a dropdown for the user to select a league in the sidebar
+    leagues = df["League"].unique()
+    selected_league = st.sidebar.selectbox("Select League", leagues)
+
+    # Create a dropdown for the user to select a team within the selected league in the sidebar
+    teams_in_selected_league = df[df["League"] == selected_league]["Team"].unique()
+    selected_team = st.sidebar.selectbox("Select Team", teams_in_selected_league, key="team_filter")
+
+    # Calculate percentile ranks for all metrics based on the filtered dataset and convert to 100.0 scale
     filtered_df = df[(df["League"] == selected_league) & (df["Team"] == selected_team) & (df["Minutes played"] >= min_minutes_played)]
 
     # Create a dropdown for the user to select a metric category in the sidebar
@@ -80,4 +87,4 @@ def main(df):
     st.markdown("Marc Lamberts @lambertsmarc @ShePlotsFC | Collected at 22-07-2023 | Wyscout")
 
 if __name__ == "__main__":
-    main(df)
+    main()
