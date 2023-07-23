@@ -8,7 +8,7 @@ df = pd.read_excel(file_path)
 # Drop duplicate columns from the DataFrame
 df = df.loc[:, ~df.columns.duplicated()]
 
-def main():
+def main(df):
     st.title("Women's football Bar graph app")
 
     # Create a sidebar column on the left for filters
@@ -26,8 +26,12 @@ def main():
     selected_team = st.sidebar.selectbox("Select Team", teams_in_selected_league, key="team_filter")
 
     # Calculate percentile ranks for all metrics based on the total dataset and convert to 100.0 scale
+    percentile_ranks = pd.DataFrame()
     for col in df.columns[6:]:
-        df[f"{col} Percentile Rank"] = df[col].rank(pct=True) * 100.0
+        percentile_ranks[f"{col} Percentile Rank"] = df[col].rank(pct=True) * 100.0
+
+    # Concatenate the percentile ranks DataFrame with the original DataFrame
+    df = pd.concat([df, percentile_ranks], axis=1)
 
     # Subset the DataFrame based on the selected league, team, and minimal minutes
     filtered_df = df[(df["League"] == selected_league) & (df["Team"] == selected_team) & (df["Minutes played"] >= min_minutes_played)]
@@ -76,4 +80,4 @@ def main():
     st.markdown("Marc Lamberts @lambertsmarc @ShePlotsFC | Collected at 22-07-2023 | Wyscout")
 
 if __name__ == "__main__":
-    main()
+    main(df)
