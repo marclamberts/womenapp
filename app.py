@@ -3,7 +3,7 @@ import pandas as pd
 import altair as alt
 
 # Function to read and preprocess the data
-@st.cache(allow_output_mutation=True)
+@st.cache_data()
 def load_and_process_data(file_path):
     df = pd.read_excel(file_path)
     # Drop duplicate columns from the DataFrame
@@ -37,11 +37,11 @@ def main():
     selected_league = st.sidebar.selectbox("Select League", leagues)
 
     # Create a dropdown for the user to select a team within the selected league in the sidebar
-    teams_in_selected_league = df[df["League"] == selected_league]["Team"].unique()
+    teams_in_selected_league = df[df["League"] == selected_league]["Team within selected timeframe"].unique()
     selected_team = st.sidebar.selectbox("Select Team", teams_in_selected_league, key="team_filter")
 
     # Calculate percentile ranks for all metrics based on the filtered dataset and convert to 100.0 scale
-    filtered_df = df[(df["League"] == selected_league) & (df["Team"] == selected_team) & (df["Minutes played"] >= min_minutes_played)]
+    filtered_df = df[(df["League"] == selected_league) & (df["Team within selected timeframe"] == selected_team) & (df["Minutes played"] >= min_minutes_played)]
 
     # Create a dropdown for the user to select a metric category in the sidebar
     metric_category = st.sidebar.selectbox("Select Metric Category", ["Offensive", "Defensive", "Passing"])
